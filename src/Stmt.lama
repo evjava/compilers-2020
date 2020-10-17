@@ -39,6 +39,27 @@ fun evalCommand(c, head) {
             esac
         | Assn (z, expr) -> [state <- [z, evalExpr(state, expr)], world]
         | Write (expr) ->   [state, writeWorld(evalExpr(state, expr), world)]
+        | w@While (expr, stmt) -> 
+          case evalExpr(state, expr) of
+            true ->  eval(eval(c, stmt), w)
+          | false -> c
+          esac
+        | If (expr, ifb, elseb) -> eval(c, case evalExpr(state, expr) of
+                                          true -> ifb
+                                        | false -> elseb
+                                        esac)
+        | r@Repeat(stmt, expr) -> {
+            local newC = eval(c, stmt);
+            case newC of
+              [newState, newWorld] ->
+                case evalExpr(newState, expr) of
+                  true -> newC
+                | false -> eval(newC, r)
+                esac
+            esac
+          }
+        | Seq (a, b) -> eval(c, head)
+        | Skip -> c
         | wat -> failure("Can't parse command: %s\n", wat.string)
         esac
     esac
